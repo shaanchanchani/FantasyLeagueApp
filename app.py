@@ -5,14 +5,11 @@ import nfl_data_py as nfl
 LEAGUE_ID = 1918224288
 YEAR = 2024
 
-
-@st.cache_data
 def load_nfl_data(year):
     df = nfl.import_pbp_data([year])
     df['week'] = df['week'].astype(int)
     return df[['passer_player_name', 'receiver_player_name', 'rusher_player_name', 'yards_gained', 'rush_touchdown', 'pass_touchdown', 'week', 'receiver_player_id', 'rusher_player_id', 'passer_player_id']]
 
-@st.cache_data
 def get_longest_tds(df):
     rushing_td_df = df[df['rush_touchdown'] == 1].nlargest(3, 'yards_gained')
     rec_td_df = df[df['pass_touchdown'] == 1].nlargest(3, 'yards_gained')
