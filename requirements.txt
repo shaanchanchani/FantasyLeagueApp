@@ -1,3 +1,2 @@
 espn-api
 pandas
-nfl-data-py==0.3.3
