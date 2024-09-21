@@ -129,9 +129,9 @@ def main():
     league = League(league_id=LEAGUE_ID, year=YEAR)
     current_week = league.current_week
     
-    # Load NFL data
-    nfl_data = load_nfl_data(YEAR)
-    longest_tds = get_longest_tds(nfl_data)
+    # # Load NFL data
+    # nfl_data = load_nfl_data(YEAR)
+    # longest_tds = get_longest_tds(nfl_data)
     
     # Adjust column widths: left column takes 2/3, right column takes 1/3
     left_col, right_col = st.columns([2, 1])
