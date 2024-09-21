@@ -1,0 +1,164 @@
+import streamlit as st
+from espn_api.football import League
+import pandas as pd
+
+LEAGUE_ID = 1918224288
+YEAR = 2024
+
+def get_league_data(league, selected_week):
+    current_week = league.current_week
+    matchups = league.box_scores(selected_week)
+    teams = league.teams
+    return current_week, matchups, teams
+
+def get_league_median_score(teams, week):
+    scores = [team.scores[week-1] for team in teams if week <= len(team.scores)]
+    return pd.Series(scores).median()
+
+def get_season_high_score(teams, current_week):
+    all_scores = [team.scores[week-1] for team in teams for week in range(1, current_week+1) if week <= len(team.scores)]
+    max_score = max(all_scores)
+    max_team = next(team for team in teams for score in team.scores if score == max_score)
+    return max_score, max_team.team_name
+
+def get_weekly_high_scores(league, current_week):
+    weekly_high_scores = []
+    for week in range(1, 15):  # Weeks 1-14
+        if week <= current_week:
+            matchups = league.box_scores(week)
+            high_score = max(max(m.home_score, m.away_score) for m in matchups)
+            high_scorer = next(m.home_team if m.home_score == high_score else m.away_team for m in matchups if max(m.home_score, m.away_score) == high_score)
+            weekly_high_scores.append(f"{high_scorer.team_name}: {high_score:.2f}")
+        else:
+            weekly_high_scores.append(f"Week {week}")
+    return weekly_high_scores
+
+def get_survivor_data(league, current_week):
+    eliminated_teams = set()
+    survivor_data = []
+    for week in range(1, 15):  # Weeks 1-14
+        if week <= current_week:
+            matchups = league.box_scores(week)
+            all_scores = [(m.home_team, m.home_score) for m in matchups] + [(m.away_team, m.away_score) for m in matchups]
+            eligible_scores = [(team, score) for team, score in all_scores if team.team_name not in eliminated_teams]
+            if eligible_scores:
+                lowest_team, lowest_score = min(eligible_scores, key=lambda x: x[1])
+                survivor_data.append(f"{lowest_team.team_name}: {lowest_score:.2f}")
+                eliminated_teams.add(lowest_team.team_name)
+            else:
+                survivor_data.append("No eligible teams")
+        else:
+            survivor_data.append(f"Week {week}")
+    return survivor_data
+
+def get_unlucky_teams(teams, current_week):
+    points_against = [(team.team_name, sum(team.scores[:current_week])) for team in teams]
+    return sorted(points_against, key=lambda x: x[1], reverse=True)[:3]
+
+def format_matchups(matchups):
+    max_name_length = max(
+        max(len(m.home_team.team_name), len(m.away_team.team_name))
+        for m in matchups
+    )
+    
+    formatted_matchups = []
+    for m in matchups:
+        home_name = m.home_team.team_name.ljust(max_name_length)
+        away_name = m.away_team.team_name.ljust(max_name_length)
+        formatted_matchups.append(
+            f"{home_name} {m.home_score:.2f} - {m.away_score:.2f} {away_name}"
+        )
+    return formatted_matchups
+    
+def format_standings(teams):
+    west_teams = [team for team in teams if team.division_name == 'West']
+    east_teams = [team for team in teams if team.division_name == 'East']
+    west_data = [(team.team_name, f"{team.wins}-{team.losses}") for team in west_teams]
+    east_data = [(team.team_name, f"{team.wins}-{team.losses}") for team in east_teams]
+    max_len = max(len(west_data), len(east_data))
+    west_data += [('', '')] * (max_len - len(west_data))
+    east_data += [('', '')] * (max_len - len(east_data))
+    return pd.DataFrame({
+        'West': [team for team, _ in west_data],
+        'West Record': [record for _, record in west_data],
+        'East': [team for team, _ in east_data],
+        'East Record': [record for _, record in east_data]
+    })
+
+def main():
+    st.set_page_config(layout="wide")
+    
+    # Initialize the League
+    league = League(league_id=LEAGUE_ID, year=YEAR)
+    current_week = league.current_week
+    
+    # Left Column
+    left_col, right_col = st.columns(2)
+    
+    with left_col:
+        st.title("Shreve Fantasy League")
+        
+        # Week selection
+        selected_week = st.selectbox("Select Week", range(1, current_week + 1), index=current_week - 1)
+        
+        st.subheader(f"Week {selected_week}")
+        
+        _, matchups, teams = get_league_data(league, selected_week)
+        
+        # League Median Score
+        median_score = get_league_median_score(teams, selected_week)
+        st.metric("League Median Score", f"{median_score:.2f}")
+        
+        # Matchups Table
+        if selected_week == current_week:
+            st.subheader("This Week's Matchups")
+        else:
+            st.subheader(f"Week {selected_week} Matchups")
+        
+        matchups_formatted = format_matchups(matchups)
+        st.table(pd.DataFrame({'Matchup': matchups_formatted}))
+        
+        # Standings Table
+        st.subheader("Standings")
+        standings_df = format_standings(league.standings())
+        st.table(standings_df)
+    
+    # Right Column
+    with right_col:
+        st.subheader("Prize Tracker")
+        
+        # Season High Score
+        season_high_score, high_score_team = get_season_high_score(league.teams, current_week)
+        st.markdown(f"**Current Season High Score ($25)**: {high_score_team}")
+        st.metric("", f"{season_high_score:.2f}")
+        
+        # Weekly High Scores Table
+        st.subheader("Weekly High Scores ($10/week)")
+        weekly_high_scores = get_weekly_high_scores(league, current_week)
+        weeks_1_7 = weekly_high_scores[:7]
+        weeks_8_14 = weekly_high_scores[7:]
+        weekly_scores_df = pd.DataFrame({
+            "Weeks 1-7": weeks_1_7,
+            "Weeks 8-14": weeks_8_14
+        })
+        st.table(weekly_scores_df)
+
+        # Survivor Table
+        st.subheader("Survivor ($10)")
+        survivor_data = get_survivor_data(league, current_week)
+        survivor_1_7 = survivor_data[:7]
+        survivor_8_14 = survivor_data[7:]
+        survivor_df = pd.DataFrame({
+            "Weeks 1-7": survivor_1_7,
+            "Weeks 8-14": survivor_8_14
+        })
+        st.table(survivor_df)
+
+        # Unlucky Teams
+        st.subheader("Unlucky ($10)")
+        unlucky_teams = get_unlucky_teams(league.teams, current_week)
+        for i, (team_name, points_against) in enumerate(unlucky_teams, 1):
+            st.markdown(f"{i}. {team_name}: {points_against:.2f}")
+        
+if __name__ == "__main__":
+    main()
