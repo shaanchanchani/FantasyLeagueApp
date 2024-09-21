@@ -114,8 +114,8 @@ def main():
     league = League(league_id=LEAGUE_ID, year=YEAR)
     current_week = league.current_week
     
-    # Left Column
-    left_col, right_col = st.columns(2)
+    # Adjust column widths: left column takes 2/3, right column takes 1/3
+    left_col, right_col = st.columns([2, 1])
     
     with left_col:
         st.title("Shreve Fantasy League")
@@ -161,13 +161,12 @@ def main():
     
     # Right Column
     with right_col:
-        st.subheader("Prize Tracker")
-        
+        st.header("Prize Tracker")
         # Season High Score
+        st.subheader("Current Season High Score ($25)")
         season_high_score, high_score_team = get_season_high_score(league.teams, current_week)
-        st.markdown(f"**Current Season High Score ($25)**: {high_score_team}")
-        st.metric("", f"{season_high_score:.2f}")
-        
+        st.metric(f"{high_score_team}",f"{season_high_score:.2f}")
+
         # Weekly High Scores Table
         st.subheader("Weekly High Scores ($10/week)")
         weekly_high_scores = get_weekly_high_scores(league, current_week)
