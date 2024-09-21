@@ -6,22 +6,6 @@ LEAGUE_ID = 1918224288
 YEAR = 2024
 
 
-# def load_nfl_data(year):
-#     df = nfl.import_pbp_data([year])
-#     df['week'] = df['week'].astype(int)
-#     return df[['passer_player_name', 'receiver_player_name', 'rusher_player_name', 'yards_gained', 'rush_touchdown', 'pass_touchdown', 'week', 'receiver_player_id', 'rusher_player_id', 'passer_player_id']]
-
-# def get_longest_tds(df):
-#     rushing_td_df = df[df['rush_touchdown'] == 1].nlargest(3, 'yards_gained')
-#     rec_td_df = df[df['pass_touchdown'] == 1].nlargest(3, 'yards_gained')
-#     pass_td_df = df[df['pass_touchdown'] == 1].nlargest(3, 'yards_gained')
-    
-#     return {
-#         'rusher': rushing_td_df[['rusher_player_name', 'yards_gained', 'week']],
-#         'receiver': rec_td_df[['receiver_player_name', 'yards_gained', 'week']],
-#         'passer': pass_td_df[['passer_player_name', 'yards_gained', 'week']]
-#     }
-
 def get_player_team_in_week(league, player_id, week):
     for team in league.teams:
         roster = team.roster
@@ -129,11 +113,7 @@ def main():
     league = League(league_id=LEAGUE_ID, year=YEAR)
     current_week = league.current_week
     
-    # # Load NFL data
-    # nfl_data = load_nfl_data(YEAR)
-    # longest_tds = get_longest_tds(nfl_data)
-    
-    # Adjust column widths: left column takes 2/3, right column takes 1/3
+
     left_col, right_col = st.columns([2, 1])
     
     with left_col:
@@ -218,26 +198,7 @@ def main():
             for i, (team_name, points_against) in enumerate(unlucky_teams, 1):
                 st.markdown(f"{i}. {team_name}: {points_against:.2f}")
 
-        # # Longest TD Stats
-        # st.subheader("Longest TDs")
-        # for td_type, td_data in longest_tds.items():
-        #     with st.expander(f"View Longest {td_type.capitalize()} TDs"):
-        #         player_column = f"{td_type}_player_name"
-                
-        #         if player_column not in td_data.columns:
-        #             st.error(f"Required column '{player_column}' not found in the data for {td_type}.")
-        #             continue
 
-        #         result_df = td_data.rename(columns={
-        #             player_column: 'Player',
-        #             'yards_gained': 'Yards',
-        #             'week': 'Week'
-        #         })
-                
-        #         if not result_df.empty:
-        #             st.dataframe(result_df, hide_index=True)
-        #         else:
-        #             st.info(f"No {td_type} touchdowns found.")
 
 if __name__ == "__main__":
     main()
