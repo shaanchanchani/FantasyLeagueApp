@@ -6,21 +6,21 @@ LEAGUE_ID = 1918224288
 YEAR = 2024
 
 
-def load_nfl_data(year):
-    df = nfl.import_pbp_data([year])
-    df['week'] = df['week'].astype(int)
-    return df[['passer_player_name', 'receiver_player_name', 'rusher_player_name', 'yards_gained', 'rush_touchdown', 'pass_touchdown', 'week', 'receiver_player_id', 'rusher_player_id', 'passer_player_id']]
+# def load_nfl_data(year):
+#     df = nfl.import_pbp_data([year])
+#     df['week'] = df['week'].astype(int)
+#     return df[['passer_player_name', 'receiver_player_name', 'rusher_player_name', 'yards_gained', 'rush_touchdown', 'pass_touchdown', 'week', 'receiver_player_id', 'rusher_player_id', 'passer_player_id']]
 
-def get_longest_tds(df):
-    rushing_td_df = df[df['rush_touchdown'] == 1].nlargest(3, 'yards_gained')
-    rec_td_df = df[df['pass_touchdown'] == 1].nlargest(3, 'yards_gained')
-    pass_td_df = df[df['pass_touchdown'] == 1].nlargest(3, 'yards_gained')
+# def get_longest_tds(df):
+#     rushing_td_df = df[df['rush_touchdown'] == 1].nlargest(3, 'yards_gained')
+#     rec_td_df = df[df['pass_touchdown'] == 1].nlargest(3, 'yards_gained')
+#     pass_td_df = df[df['pass_touchdown'] == 1].nlargest(3, 'yards_gained')
     
-    return {
-        'rusher': rushing_td_df[['rusher_player_name', 'yards_gained', 'week']],
-        'receiver': rec_td_df[['receiver_player_name', 'yards_gained', 'week']],
-        'passer': pass_td_df[['passer_player_name', 'yards_gained', 'week']]
-    }
+#     return {
+#         'rusher': rushing_td_df[['rusher_player_name', 'yards_gained', 'week']],
+#         'receiver': rec_td_df[['receiver_player_name', 'yards_gained', 'week']],
+#         'passer': pass_td_df[['passer_player_name', 'yards_gained', 'week']]
+#     }
 
 def get_player_team_in_week(league, player_id, week):
     for team in league.teams:
