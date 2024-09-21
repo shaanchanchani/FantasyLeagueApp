@@ -1,2 +1,3 @@
 espn-api
 pandas
+nfl-data-py

@@ -1,9 +1,40 @@
 import streamlit as st
 from espn_api.football import League
 import pandas as pd
-
+import nfl_data_py as nfl
 LEAGUE_ID = 1918224288
 YEAR = 2024
+
+
+@st.cache_data
+def load_nfl_data(year):
+    df = nfl.import_pbp_data([year])
+    df['week'] = df['week'].astype(int)
+    return df[['passer_player_name', 'receiver_player_name', 'rusher_player_name', 'yards_gained', 'rush_touchdown', 'pass_touchdown', 'week', 'receiver_player_id', 'rusher_player_id', 'passer_player_id']]
+
+@st.cache_data
+def get_longest_tds(df):
+    rushing_td_df = df[df['rush_touchdown'] == 1].nlargest(3, 'yards_gained')
+    rec_td_df = df[df['pass_touchdown'] == 1].nlargest(3, 'yards_gained')
+    pass_td_df = df[df['pass_touchdown'] == 1].nlargest(3, 'yards_gained')
+    
+    return {
+        'rusher': rushing_td_df[['rusher_player_name', 'yards_gained', 'week']],
+        'receiver': rec_td_df[['receiver_player_name', 'yards_gained', 'week']],
+        'passer': pass_td_df[['passer_player_name', 'yards_gained', 'week']]
+    }
+
+def get_player_team_in_week(league, player_id, week):
+    for team in league.teams:
+        roster = team.roster
+        for player in roster:
+            if player.playerId == player_id:
+                # Check if the player was in the starting lineup for that week
+                box_scores = league.box_scores(week)
+                for matchup in box_scores:
+                    if player in matchup.home_lineup or player in matchup.away_lineup:
+                        return team.team_name
+    return None
 
 def get_league_data(league, selected_week):
     current_week = league.current_week
@@ -51,31 +82,17 @@ def get_survivor_data(league, current_week):
             survivor_data.append(f"Week {week}")
     return survivor_data
 
+
 def get_team_avatar_url(team):
     """Extract the avatar URL from the team object."""
     if team.logo_url:
         return team.logo_url
     return "https://example.com/default-avatar.png"  # Replace with a default avatar URL
 
-def get_unlucky_teams(teams, current_week):
-    points_against = [(team.team_name, sum(team.scores[:current_week])) for team in teams]
+def get_unlucky_teams(teams):
+    points_against = [(team.team_name, team.points_against) for team in teams]
     return sorted(points_against, key=lambda x: x[1], reverse=True)[:3]
 
-# def format_matchups(matchups):
-#     max_name_length = max(
-#         max(len(m.home_team.team_name), len(m.away_team.team_name))
-#         for m in matchups
-#     )
-    
-#     formatted_matchups = []
-#     for m in matchups:
-#         home_name = m.home_team.team_name.ljust(max_name_length)
-#         away_name = m.away_team.team_name.ljust(max_name_length)
-#         formatted_matchups.append(
-#             f"{home_name} {m.home_score:.2f} - {m.away_score:.2f} {away_name}"
-#         )
-#     return formatted_matchups
-    
 def format_standings(teams):
     west_teams = [team for team in teams if team.division_name == 'West']
     east_teams = [team for team in teams if team.division_name == 'East']
@@ -113,6 +130,10 @@ def main():
     # Initialize the League
     league = League(league_id=LEAGUE_ID, year=YEAR)
     current_week = league.current_week
+    
+    # Load NFL data
+    nfl_data = load_nfl_data(YEAR)
+    longest_tds = get_longest_tds(nfl_data)
     
     # Adjust column widths: left column takes 2/3, right column takes 1/3
     left_col, right_col = st.columns([2, 1])
@@ -158,42 +179,67 @@ def main():
             "East": st.column_config.TextColumn("East", width="medium"),
             "East Record": st.column_config.TextColumn("Record", width="small")
         })
-    
+        
     # Right Column
     with right_col:
         st.header("Prize Tracker")
+        
         # Season High Score
         st.subheader("Current Season High Score ($25)")
         season_high_score, high_score_team = get_season_high_score(league.teams, current_week)
-        st.metric(f"{high_score_team}",f"{season_high_score:.2f}")
+        st.metric(f"{high_score_team}", f"{season_high_score:.2f}")
 
         # Weekly High Scores Table
         st.subheader("Weekly High Scores ($10/week)")
-        weekly_high_scores = get_weekly_high_scores(league, current_week)
-        weeks_1_7 = weekly_high_scores[:7]
-        weeks_8_14 = weekly_high_scores[7:]
-        weekly_scores_df = pd.DataFrame({
-            "Weeks 1-7": weeks_1_7,
-            "Weeks 8-14": weeks_8_14
-        })
-        st.dataframe(weekly_scores_df, hide_index=True)
+        with st.expander("View Weekly High Scorers"):
+            weekly_high_scores = get_weekly_high_scores(league, current_week)
+            weeks_1_7 = weekly_high_scores[:7]
+            weeks_8_14 = weekly_high_scores[7:]
+            weekly_scores_df = pd.DataFrame({
+                "Weeks 1-7": weeks_1_7,
+                "Weeks 8-14": weeks_8_14
+            })
+            st.dataframe(weekly_scores_df, hide_index=True)
 
         # Survivor Table
         st.subheader("Survivor ($10)")
-        survivor_data = get_survivor_data(league, current_week)
-        survivor_1_7 = survivor_data[:7]
-        survivor_8_14 = survivor_data[7:]
-        survivor_df = pd.DataFrame({
-            "Weeks 1-7": survivor_1_7,
-            "Weeks 8-14": survivor_8_14
-        })
-        st.dataframe(survivor_df, hide_index=True)
+        with st.expander("View Survivor Eliminations"):
+            survivor_data = get_survivor_data(league, current_week)
+            survivor_1_7 = survivor_data[:7]
+            survivor_8_14 = survivor_data[7:]
+            survivor_df = pd.DataFrame({
+                "Weeks 1-7": survivor_1_7,
+                "Weeks 8-14": survivor_8_14
+            })
+            st.dataframe(survivor_df, hide_index=True)
 
         # Unlucky Teams
         st.subheader("Unlucky ($10)")
-        unlucky_teams = get_unlucky_teams(league.teams, current_week)
-        for i, (team_name, points_against) in enumerate(unlucky_teams, 1):
-            st.markdown(f"{i}. {team_name}: {points_against:.2f}")
-        
+        with st.expander("View Unlucky Contenders"):
+            unlucky_teams = get_unlucky_teams(league.teams)
+            for i, (team_name, points_against) in enumerate(unlucky_teams, 1):
+                st.markdown(f"{i}. {team_name}: {points_against:.2f}")
+
+        # Longest TD Stats
+        st.subheader("Longest TDs")
+        for td_type, td_data in longest_tds.items():
+            with st.expander(f"View Longest {td_type.capitalize()} TDs"):
+                player_column = f"{td_type}_player_name"
+                
+                if player_column not in td_data.columns:
+                    st.error(f"Required column '{player_column}' not found in the data for {td_type}.")
+                    continue
+
+                result_df = td_data.rename(columns={
+                    player_column: 'Player',
+                    'yards_gained': 'Yards',
+                    'week': 'Week'
+                })
+                
+                if not result_df.empty:
+                    st.dataframe(result_df, hide_index=True)
+                else:
+                    st.info(f"No {td_type} touchdowns found.")
+
 if __name__ == "__main__":
     main()
