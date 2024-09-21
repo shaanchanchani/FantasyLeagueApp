@@ -51,39 +51,61 @@ def get_survivor_data(league, current_week):
             survivor_data.append(f"Week {week}")
     return survivor_data
 
+def get_team_avatar_url(team):
+    """Extract the avatar URL from the team object."""
+    if team.logo_url:
+        return team.logo_url
+    return "https://example.com/default-avatar.png"  # Replace with a default avatar URL
+
 def get_unlucky_teams(teams, current_week):
     points_against = [(team.team_name, sum(team.scores[:current_week])) for team in teams]
     return sorted(points_against, key=lambda x: x[1], reverse=True)[:3]
 
-def format_matchups(matchups):
-    max_name_length = max(
-        max(len(m.home_team.team_name), len(m.away_team.team_name))
-        for m in matchups
-    )
+# def format_matchups(matchups):
+#     max_name_length = max(
+#         max(len(m.home_team.team_name), len(m.away_team.team_name))
+#         for m in matchups
+#     )
     
-    formatted_matchups = []
-    for m in matchups:
-        home_name = m.home_team.team_name.ljust(max_name_length)
-        away_name = m.away_team.team_name.ljust(max_name_length)
-        formatted_matchups.append(
-            f"{home_name} {m.home_score:.2f} - {m.away_score:.2f} {away_name}"
-        )
-    return formatted_matchups
+#     formatted_matchups = []
+#     for m in matchups:
+#         home_name = m.home_team.team_name.ljust(max_name_length)
+#         away_name = m.away_team.team_name.ljust(max_name_length)
+#         formatted_matchups.append(
+#             f"{home_name} {m.home_score:.2f} - {m.away_score:.2f} {away_name}"
+#         )
+#     return formatted_matchups
     
 def format_standings(teams):
     west_teams = [team for team in teams if team.division_name == 'West']
     east_teams = [team for team in teams if team.division_name == 'East']
-    west_data = [(team.team_name, f"{team.wins}-{team.losses}") for team in west_teams]
-    east_data = [(team.team_name, f"{team.wins}-{team.losses}") for team in east_teams]
+    west_data = [(get_team_avatar_url(team), team.team_name, f"{team.wins}-{team.losses}") for team in west_teams]
+    east_data = [(get_team_avatar_url(team), team.team_name, f"{team.wins}-{team.losses}") for team in east_teams]
     max_len = max(len(west_data), len(east_data))
-    west_data += [('', '')] * (max_len - len(west_data))
-    east_data += [('', '')] * (max_len - len(east_data))
+    west_data += [('', '', '')] * (max_len - len(west_data))
+    east_data += [('', '', '')] * (max_len - len(east_data))
     return pd.DataFrame({
-        'West': [team for team, _ in west_data],
-        'West Record': [record for _, record in west_data],
-        'East': [team for team, _ in east_data],
-        'East Record': [record for _, record in east_data]
+        'West Avatar': [avatar for avatar, _, _ in west_data],
+        'West': [team for _, team, _ in west_data],
+        'West Record': [record for _, _, record in west_data],
+        'East Avatar': [avatar for avatar, _, _ in east_data],
+        'East': [team for _, team, _ in east_data],
+        'East Record': [record for _, _, record in east_data]
     })
+
+
+def format_matchups(matchups):
+    formatted_matchups = []
+    for m in matchups:
+        formatted_matchups.append({
+            'Team1Avatar': get_team_avatar_url(m.home_team),
+            'Team1Name': m.home_team.team_name,
+            'Team1Score': f"{m.home_score:.2f}",
+            'Team2Score': f"{m.away_score:.2f}",
+            'Team2Name': m.away_team.team_name,
+            'Team2Avatar': get_team_avatar_url(m.away_team)
+        })
+    return pd.DataFrame(formatted_matchups)
 
 def main():
     st.set_page_config(layout="wide")
@@ -115,13 +137,27 @@ def main():
         else:
             st.subheader(f"Week {selected_week} Matchups")
         
-        matchups_formatted = format_matchups(matchups)
-        st.table(pd.DataFrame({'Matchup': matchups_formatted}))
+        matchups_df = format_matchups(matchups)
+        st.dataframe(matchups_df, hide_index=True, column_config={
+            "Team1Avatar": st.column_config.ImageColumn("", width="small"),
+            "Team1Name": st.column_config.TextColumn("", width="medium"),
+            "Team1Score": st.column_config.TextColumn("", width="small"),
+            "Team2Score": st.column_config.TextColumn("", width="small"),
+            "Team2Name": st.column_config.TextColumn("", width="medium"),
+            "Team2Avatar": st.column_config.ImageColumn("", width="small")
+        })
         
         # Standings Table
         st.subheader("Standings")
         standings_df = format_standings(league.standings())
-        st.table(standings_df)
+        st.dataframe(standings_df, hide_index=True, column_config={
+            "West Avatar": st.column_config.ImageColumn("", width="small"),
+            "West": st.column_config.TextColumn("West", width="medium"),
+            "West Record": st.column_config.TextColumn("Record", width="small"),
+            "East Avatar": st.column_config.ImageColumn("", width="small"),
+            "East": st.column_config.TextColumn("East", width="medium"),
+            "East Record": st.column_config.TextColumn("Record", width="small")
+        })
     
     # Right Column
     with right_col:
@@ -141,7 +177,7 @@ def main():
             "Weeks 1-7": weeks_1_7,
             "Weeks 8-14": weeks_8_14
         })
-        st.table(weekly_scores_df)
+        st.dataframe(weekly_scores_df, hide_index=True)
 
         # Survivor Table
         st.subheader("Survivor ($10)")
@@ -152,7 +188,7 @@ def main():
             "Weeks 1-7": survivor_1_7,
             "Weeks 8-14": survivor_8_14
         })
-        st.table(survivor_df)
+        st.dataframe(survivor_df, hide_index=True)
 
         # Unlucky Teams
         st.subheader("Unlucky ($10)")
