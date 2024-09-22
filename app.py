@@ -119,7 +119,6 @@ def format_standings(teams):
         'East Record': [record for _, _, record in east_data]
     })
 
-
 def get_historical_records(league_id, espn_s2, swid):
     historical_records = {}
     
