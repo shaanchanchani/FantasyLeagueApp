@@ -184,7 +184,7 @@ def main():
     longest_tds = get_longest_tds(nfl_data)
     
     # Get historical records
-    historical_records = get_historical_records(LEAGUE_ID, ESPN_S2, SWID)
+    # historical_records = get_historical_records(LEAGUE_ID, ESPN_S2, SWID)
     left_col, right_col = st.columns([2, 1])
     
     with left_col:
