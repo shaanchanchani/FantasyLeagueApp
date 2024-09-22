@@ -120,11 +120,11 @@ def format_standings(teams):
     })
 
 
-def get_historical_records(league_id):
+def get_historical_records(league_id, espn_s2, swid):
     historical_records = {}
     
     for year in [2022, 2023]:
-        historical_league = League(league_id=league_id, year=year)
+        historical_league = League(league_id=league_id, year=year, espn_s2=espn_s2, swid=swid)
         
         for week in range(1, historical_league.current_week):
             matchups = historical_league.box_scores(week)
@@ -175,15 +175,17 @@ def format_matchups(matchups, historical_records):
 def main():
     st.set_page_config(layout="wide")
     
+    # Get credentials
+    ESPN_S2, SWID = get_credentials()
+    
     # Initialize the League
-    league = League(league_id=LEAGUE_ID, year=YEAR)
+    league = League(league_id=LEAGUE_ID, year=YEAR, espn_s2=ESPN_S2, swid=SWID)
     current_week = league.current_week
     nfl_data = load_nfl_data(YEAR)
     longest_tds = get_longest_tds(nfl_data)
     
     # Get historical records
-    historical_records = get_historical_records(LEAGUE_ID)
-
+    historical_records = get_historical_records(LEAGUE_ID, ESPN_S2, SWID)
     left_col, right_col = st.columns([2, 1])
     
     with left_col:
