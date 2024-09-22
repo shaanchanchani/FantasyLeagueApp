@@ -147,24 +147,13 @@ def get_historical_records(league_id, espn_s2, swid):
     
     return historical_records
 
-def format_matchups(matchups, historical_records):
+def format_matchups(matchups):
     formatted_matchups = []
     for m in matchups:
-        team1_id = m.home_team.team_id
-        team2_id = m.away_team.team_id
-        key = tuple(sorted([team1_id, team2_id]))
-        
-        if key in historical_records:
-            record = historical_records[key]
-            historical_record = f"({record[team1_id]} - {record[team2_id]})"
-        else:
-            historical_record = "(0 - 0)"
-        
         formatted_matchups.append({
             'Team1Avatar': get_team_avatar_url(m.home_team),
             'Team1Name': m.home_team.team_name,
             'Team1Score': f"{m.home_score:.2f}",
-            'HistoricalRecord': historical_record,
             'Team2Score': f"{m.away_score:.2f}",
             'Team2Name': m.away_team.team_name,
             'Team2Avatar': get_team_avatar_url(m.away_team)
