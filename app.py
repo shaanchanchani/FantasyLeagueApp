@@ -269,26 +269,26 @@ def main():
             for i, (team_name, points_against) in enumerate(unlucky_teams, 1):
                 st.markdown(f"{i}. {team_name}: {points_against:.2f}")
         
-                # Longest TD Stats
-        st.subheader("Longest TDs")
-        for td_type, td_data in longest_tds.items():
-            with st.expander(f"View Longest {td_type.capitalize()} TDs"):
-                player_column = f"{td_type}_player_name"
+        #         # Longest TD Stats
+        # st.subheader("Longest TDs")
+        # for td_type, td_data in longest_tds.items():
+        #     with st.expander(f"View Longest {td_type.capitalize()} TDs"):
+        #         player_column = f"{td_type}_player_name"
                 
-                if player_column not in td_data.columns:
-                    st.error(f"Required column '{player_column}' not found in the data for {td_type}.")
-                    continue
+        #         if player_column not in td_data.columns:
+        #             st.error(f"Required column '{player_column}' not found in the data for {td_type}.")
+        #             continue
 
-                result_df = td_data.rename(columns={
-                    player_column: 'Player',
-                    'yards_gained': 'Yards',
-                    'week': 'Week'
-                })
+        #         result_df = td_data.rename(columns={
+        #             player_column: 'Player',
+        #             'yards_gained': 'Yards',
+        #             'week': 'Week'
+        #         })
                 
-                if not result_df.empty:
-                    st.dataframe(result_df, hide_index=True)
-                else:
-                    st.info(f"No {td_type} touchdowns found.")
+        #         if not result_df.empty:
+        #             st.dataframe(result_df, hide_index=True)
+        #         else:
+        #             st.info(f"No {td_type} touchdowns found.")
 
 
 
