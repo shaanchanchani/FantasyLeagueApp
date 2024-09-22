@@ -5,6 +5,10 @@ import nfl_data_py as nfl
 LEAGUE_ID = 1918224288
 YEAR = 2024
 
+def load_nfl_data(year):
+    df = nfl.import_pbp_data([year])
+    df['week'] = df['week'].astype(int)
+    return df[['passer_player_name', 'receiver_player_name', 'rusher_player_name', 'yards_gained', 'rush_touchdown', 'pass_touchdown', 'week']]
 
 def get_player_team_in_week(league, player_id, week):
     for team in league.teams:
@@ -119,6 +123,9 @@ def main():
     with left_col:
         st.title("Shreve Fantasy League")
         
+            # Load NFL data
+        nfl_data = load_nfl_data(YEAR)
+        # longest_tds = get_longest_tds(nfl_data)
         # Week selection
         selected_week = st.selectbox("Select Week", range(1, current_week + 1), index=current_week - 1)
         
