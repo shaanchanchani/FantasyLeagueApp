@@ -8,12 +8,12 @@ LEAGUE_ID = 1918224288
 YEAR = 2024
 
 def get_credentials():
-    if 'ESPN_S2' in st.secrets:
+    if 'espn_s2' in st.secrets:
         # We're on Streamlit Cloud
-        return st.secrets['ESPN_S2'], st.secrets['SWID']
+        return st.secrets['espn_s2'], st.secrets['SWID']
     else:
         # We're running locally
-        return os.getenv('ESPN_S2'), os.getenv('SWID')
+        return os.getenv('espn_s2'), os.getenv('SWID')
 
 ESPN_S2, SWID = get_credentials()
 
