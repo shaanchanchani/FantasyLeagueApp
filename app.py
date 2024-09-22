@@ -116,16 +116,13 @@ def main():
     # Initialize the League
     league = League(league_id=LEAGUE_ID, year=YEAR)
     current_week = league.current_week
-    
+    nfl_data = load_nfl_data(YEAR)
+    longest_tds = get_longest_tds(nfl_data)
 
     left_col, right_col = st.columns([2, 1])
     
     with left_col:
         st.title("Shreve Fantasy League")
-        
-            # Load NFL data
-        nfl_data = load_nfl_data(YEAR)
-        # longest_tds = get_longest_tds(nfl_data)
         # Week selection
         selected_week = st.selectbox("Select Week", range(1, current_week + 1), index=current_week - 1)
         
@@ -204,6 +201,27 @@ def main():
             unlucky_teams = get_unlucky_teams(league.teams)
             for i, (team_name, points_against) in enumerate(unlucky_teams, 1):
                 st.markdown(f"{i}. {team_name}: {points_against:.2f}")
+        
+                # Longest TD Stats
+        st.subheader("Longest TDs")
+        for td_type, td_data in longest_tds.items():
+            with st.expander(f"View Longest {td_type.capitalize()} TDs"):
+                player_column = f"{td_type}_player_name"
+                
+                if player_column not in td_data.columns:
+                    st.error(f"Required column '{player_column}' not found in the data for {td_type}.")
+                    continue
+
+                result_df = td_data.rename(columns={
+                    player_column: 'Player',
+                    'yards_gained': 'Yards',
+                    'week': 'Week'
+                })
+                
+                if not result_df.empty:
+                    st.dataframe(result_df, hide_index=True)
+                else:
+                    st.info(f"No {td_type} touchdowns found.")
 
 
 
