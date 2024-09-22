@@ -207,7 +207,7 @@ def main():
             st.subheader(f"Week {selected_week} Matchups")
         
         # matchups_df = format_matchups(matchups, historical_records)
-        matchups_df = format_matchups(matchups, historical_records)
+        matchups_df = format_matchups(matchups)
 
         st.dataframe(matchups_df, hide_index=True, column_config={
             "Team1Avatar": st.column_config.ImageColumn("", width="small"),
