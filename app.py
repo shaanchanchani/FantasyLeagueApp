@@ -2,8 +2,20 @@ import streamlit as st
 from espn_api.football import League
 import pandas as pd
 import nfl_data_py as nfl
+import os
+
 LEAGUE_ID = 1918224288
 YEAR = 2024
+
+def get_credentials():
+    if 'ESPN_S2' in st.secrets:
+        # We're on Streamlit Cloud
+        return st.secrets['ESPN_S2'], st.secrets['SWID']
+    else:
+        # We're running locally
+        return os.getenv('ESPN_S2'), os.getenv('SWID')
+
+ESPN_S2, SWID = get_credentials()
 
 def load_nfl_data(year):
     df = nfl.import_pbp_data([year],['passer_player_name', 'receiver_player_name', 'rusher_player_name', 'yards_gained', 'rush_touchdown', 'pass_touchdown', 'week'])
@@ -108,13 +120,52 @@ def format_standings(teams):
     })
 
 
-def format_matchups(matchups):
+def get_historical_records(league_id):
+    historical_records = {}
+    
+    for year in [2022, 2023]:
+        historical_league = League(league_id=league_id, year=year)
+        
+        for week in range(1, historical_league.current_week):
+            matchups = historical_league.box_scores(week)
+            for matchup in matchups:
+                team1_id = matchup.home_team.team_id
+                team2_id = matchup.away_team.team_id
+                
+                # Skip records for new teams or teams with new owners
+                if year == 2022 and (team1_id == 5 or team2_id == 5 or team1_id in [8, 12] or team2_id in [8, 12]):
+                    continue
+                
+                key = tuple(sorted([team1_id, team2_id]))
+                if key not in historical_records:
+                    historical_records[key] = {team1_id: 0, team2_id: 0}
+                
+                if matchup.home_score > matchup.away_score:
+                    historical_records[key][team1_id] += 1
+                elif matchup.away_score > matchup.home_score:
+                    historical_records[key][team2_id] += 1
+                # Ties are not counted in this implementation
+    
+    return historical_records
+
+def format_matchups(matchups, historical_records):
     formatted_matchups = []
     for m in matchups:
+        team1_id = m.home_team.team_id
+        team2_id = m.away_team.team_id
+        key = tuple(sorted([team1_id, team2_id]))
+        
+        if key in historical_records:
+            record = historical_records[key]
+            historical_record = f"({record[team1_id]} - {record[team2_id]})"
+        else:
+            historical_record = "(0 - 0)"
+        
         formatted_matchups.append({
             'Team1Avatar': get_team_avatar_url(m.home_team),
             'Team1Name': m.home_team.team_name,
             'Team1Score': f"{m.home_score:.2f}",
+            'HistoricalRecord': historical_record,
             'Team2Score': f"{m.away_score:.2f}",
             'Team2Name': m.away_team.team_name,
             'Team2Avatar': get_team_avatar_url(m.away_team)
@@ -129,6 +180,9 @@ def main():
     current_week = league.current_week
     nfl_data = load_nfl_data(YEAR)
     longest_tds = get_longest_tds(nfl_data)
+    
+    # Get historical records
+    historical_records = get_historical_records(LEAGUE_ID)
 
     left_col, right_col = st.columns([2, 1])
     
@@ -151,16 +205,17 @@ def main():
         else:
             st.subheader(f"Week {selected_week} Matchups")
         
-        matchups_df = format_matchups(matchups)
+        matchups_df = format_matchups(matchups, historical_records)
         st.dataframe(matchups_df, hide_index=True, column_config={
             "Team1Avatar": st.column_config.ImageColumn("", width="small"),
             "Team1Name": st.column_config.TextColumn("", width="medium"),
             "Team1Score": st.column_config.TextColumn("", width="small"),
             "Team2Score": st.column_config.TextColumn("", width="small"),
             "Team2Name": st.column_config.TextColumn("", width="medium"),
-            "Team2Avatar": st.column_config.ImageColumn("", width="small")
+            "Team2Avatar": st.column_config.ImageColumn("", width="small"),
+            "HistoricalRecord": st.column_config.TextColumn("H2H Record", width="small"),
+
         })
-        
         # Standings Table
         st.subheader("Standings")
         standings_df = format_standings(league.standings())
