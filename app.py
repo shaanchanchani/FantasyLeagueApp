@@ -6,9 +6,9 @@ LEAGUE_ID = 1918224288
 YEAR = 2024
 
 def load_nfl_data(year):
-    df = nfl.import_pbp_data([year])
+    df = nfl.import_pbp_data([year],['passer_player_name', 'receiver_player_name', 'rusher_player_name', 'yards_gained', 'rush_touchdown', 'pass_touchdown', 'week'])
     df['week'] = df['week'].astype(int)
-    return df[['passer_player_name', 'receiver_player_name', 'rusher_player_name', 'yards_gained', 'rush_touchdown', 'pass_touchdown', 'week']]
+    return df
 
 def get_player_team_in_week(league, player_id, week):
     for team in league.teams:
